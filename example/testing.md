@@ -1,0 +1,1 @@
+This document describes how to test the example configuration for the `llmcli` tool. The example configuration is designed to demonstrate how to use the tool with a simple set of commands.

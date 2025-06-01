@@ -1,0 +1,4 @@
+Read all the markdown files in this directory.
+
+Based on the files, generate an index.md which represents a table of contents, linking to the
+individual files. Generate the titles based on the content, automatically.

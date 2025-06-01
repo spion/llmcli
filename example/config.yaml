@@ -1,0 +1,63 @@
+shell: "bash"
+tools:
+  - name: "list_files"
+    description: "List files in a directory"
+    input_schema:
+      - type: object
+        properties:
+          path:
+            type: string
+            description: "Path to the directory (relative to current directory)"
+        required:
+          - path
+    command: |
+      real_path=$(realpath "$param_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: Path must be within the current directory."
+        exit 1
+      fi
+      ls -la "$param_path"
+
+  - name: "read_file"
+    description: "Read the contents of a file"
+    input_schema:
+      - type: object
+        properties:
+          file_path:
+            type: string
+            description: "Path to the file to read"
+        required:
+          - file_path
+    command: |
+      real_path=$(realpath "$param_file_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: File path must be within the current directory."
+        exit 1
+      fi
+      cat "$param_file_path"
+
+  - name: "write_file"
+    description: "Write content to a file"
+    input_schema:
+      - type: object
+        properties:
+          file_path:
+            type: string
+            description: "Path to the file to write"
+
+          content:
+            type: string
+            description: "Content to write to the file"
+        required:
+          - file_path
+          - content
+    command: |
+      real_path=$(realpath "$param_file_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: File path must be within the current directory."
+        exit 1
+      fi
+      echo "$param_content" > "$param_file_path"
