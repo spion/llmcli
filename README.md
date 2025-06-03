@@ -68,7 +68,11 @@ tools:
 
 ## Installation
 
-cargo install --git https://github.com/spion/llmcli llmcli
+For now, `llmcli` is only available from git. You can install it using `cargo`:
+
+```bash
+cargo install --git https://github.com/spion/llmcli.git llmcli
+```
 
 ## Usage
 
