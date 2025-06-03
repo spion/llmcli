@@ -109,5 +109,5 @@ it will undergo significant restructuring in the future.
 - [ ] Support for nushell
 - [ ] Command discovery: allow scripts to return JSON with available sub-commands and their schemas
 - [ ] mcp server mode: allow llmcli to run as a server that can be used by other tools
-- [ ] support for Claude-compatible API endpoints
-- [ ] support for response caching
+- [ ] support for Claude-compatible API endpoints and Google's Gemini API endpoints
+  - [ ] support for explicit prompt caching with Claude
