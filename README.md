@@ -100,7 +100,9 @@ See the [example directory](./example) for a sample configuration with basic too
 
 ## Status
 
-This project is in early development.
+This project is in early development / proototype stage. The core functionality as described in
+the README has been implemented in the prototype under the `cli` directory, but its highly likely
+it will undergo significant restructuring in the future.
 
 ## Planned features
 
