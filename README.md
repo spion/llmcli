@@ -23,47 +23,68 @@ the input schema and how the command uses those arguments through environment va
 Here's an example of a simple `llmcli` configuration file that defines a couple of tools:
 
 ```yaml
-
 shell: "bash"  # or "nushell", "zsh", etc - this refers to the shell used to execute commands
 tools:
-  - name: "git clone"
-    description: "Clone a git repository"
+  - name: "list_files"
+    description: "List files in a directory"
     input_schema:
       - type: object
         properties:
-          repo_url:
+          path:
             type: string
-            description: "URL of the git repository to clone"
-            pattern: "https?://.*"  # Regex to validate the URL
+            description: "Path to the directory (relative to current directory)"
+        required:
+          - path
     command: |
-      git clone $param_repo_url
-    shell: "bash"  # Can override shell for individual commands
-  - name: "read file"
-    description: "Read a file and print its contents"
+      real_path=$(realpath "$param_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: Path must be within the current directory."
+        exit 1
+      fi
+      ls -la "$param_path"
+
+  - name: "read_file"
+    description: "Read the contents of a file"
     input_schema:
       - type: object
         properties:
           file_path:
             type: string
             description: "Path to the file to read"
-            pattern: "^$PWD/.+"  # Regex to ensure the file is within the current working directory
+        required:
+          - file_path
     command: |
+      real_path=$(realpath "$param_file_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: File path must be within the current directory."
+        exit 1
+      fi
       cat "$param_file_path"
 
-    - name: "patcher apply"
-      description: "Apply an aider-style search replace patch to a file"
-      input_schema:
-        - type: object
-          properties:
-            file_path:
-              type: string
-              description: "Path to the file to patch"
-              pattern: "^$PWD/.+"  # Regex to ensure the file is within the current working directory
-            patch:
-              type: string
-              description: "The patch to apply, in the form of a search and replace string"
-      command: |
-        patcher apply "$param_file_path" --patch "$param_patch"
+  - name: "write_file"
+    description: "Write content to a file"
+    input_schema:
+      - type: object
+        properties:
+          file_path:
+            type: string
+            description: "Path to the file to write"
+          content:
+            type: string
+            description: "Content to write to the file"
+        required:
+          - file_path
+          - content
+    command: |
+      real_path=$(realpath "$param_file_path")
+      # Ensure its within the current directory
+      if [[ "$real_path/" != $(pwd)/* ]]; then
+        echo "Error: File path must be within the current directory."
+        exit 1
+      fi
+      echo "$param_content" > "$param_file_path"
 ```
 
 ## Installation
