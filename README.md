@@ -27,14 +27,11 @@ shell: "bash"  # or "nushell", "zsh", etc - this refers to the shell used to exe
 tools:
   - name: "list_files"
     description: "List files in a directory"
-    input_schema:
-      type: object
-      properties:
-        path:
-          type: string
-          description: "Path to the directory (relative to current directory)"
-      required:
-        - path
+    params:
+      path:
+        type: string
+        description: "Path to the directory (relative to current directory)"
+        required: true
     command: |
       real_path=$(realpath "$param_path")
       # Ensure its within the current directory
@@ -46,14 +43,11 @@ tools:
 
   - name: "read_file"
     description: "Read the contents of a file"
-    input_schema:
-      type: object
-      properties:
-        file_path:
-          type: string
-          description: "Path to the file to read"
-      required:
-        - file_path
+    params:
+      file_path:
+        type: string
+        description: "Path to the file to read"
+        required: true
     command: |
       real_path=$(realpath "$param_file_path")
       # Ensure its within the current directory
@@ -65,18 +59,15 @@ tools:
 
   - name: "write_file"
     description: "Write content to a file"
-    input_schema:
-      type: object
-      properties:
-        file_path:
-          type: string
-          description: "Path to the file to write"
-        content:
-          type: string
-          description: "Content to write to the file"
-      required:
-        - file_path
-        - content
+    params:
+      file_path:
+        type: string
+        description: "Path to the file to write"
+        required: true
+      content:
+        type: string
+        description: "Content to write to the file"
+        required: true
     command: |
       real_path=$(realpath "$param_file_path")
       # Ensure its within the current directory

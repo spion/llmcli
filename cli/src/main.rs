@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
 
-use crate::llm_client_trait::ToolDefinition;
+use crate::config::ToolDefinition;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -59,20 +59,7 @@ async fn main() -> Result<()> {
 
   debug!("Prompt: {}", prompt.trim());
 
-  // Convert tools to LLM format
-  let maybe_tool_definitions: Result<Vec<ToolDefinition>> = config
-    .tools
-    .iter()
-    .map(|tool| {
-      Ok(ToolDefinition {
-        name: tool.name.clone(),
-        description: tool.description.clone(),
-        parameters: serde_json::to_value(&tool.input_schema)?,
-      })
-    })
-    .collect();
-
-  let tool_definitions = maybe_tool_definitions?;
+  let tool_definitions: Vec<_> = config.tools.iter().map(|t| t.definition.clone()).collect();
 
   // Create session
   let session_config = SessionConfig {
@@ -110,7 +97,7 @@ async fn main() -> Result<()> {
       let tool = config
         .tools
         .iter()
-        .find(|t| t.name == tool_call.name)
+        .find(|t| t.definition.name == tool_call.name)
         .ok_or_else(|| anyhow::anyhow!("Tool not found: {}", tool_call.name))?;
 
       // Execute the tool

@@ -2,6 +2,8 @@ use anyhow::Result;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 
+use crate::config::ToolDefinition;
+
 // Session configuration
 #[derive(Debug, Clone)]
 pub struct SessionConfig {
@@ -44,13 +46,6 @@ pub struct ToolCall {
   pub id: String,
   pub name: String,
   pub arguments: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ToolDefinition {
-  pub name: String,
-  pub description: String,
-  pub parameters: serde_json::Value,
 }
 
 // Events that can be emitted

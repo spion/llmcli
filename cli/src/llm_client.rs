@@ -1,6 +1,9 @@
-use crate::llm_client_trait::{
-  CompletionResult, EventStream, LlmClient, LlmEvent, LlmSession, SessionConfig, ToolCall,
-  ToolResult,
+use crate::{
+  config::ToolDefinition,
+  llm_client_trait::{
+    CompletionResult, EventStream, LlmClient, LlmEvent, LlmSession, SessionConfig, ToolCall,
+    ToolResult,
+  },
 };
 use anyhow::{Result, anyhow};
 use async_openai_types::types::{self as oai, ChatCompletionRequestAssistantMessageContent};
@@ -43,6 +46,29 @@ struct OpenAISession {
   api_key: String,
   config: SessionConfig,
   messages: Vec<oai::ChatCompletionRequestMessage>,
+}
+
+fn tool_definition_to_params_json(tool: &ToolDefinition) -> serde_json::Value {
+  serde_json::json!({
+    "type": "object",
+    "properties": tool.params.iter().map(|(name, prop)| {
+      (
+        name.clone(),
+        serde_json::json!({
+          "type": prop.prop_type,
+          "description": prop.description,
+          "required": prop.required.unwrap_or(false),
+        }),
+      )
+    }).collect::<serde_json::Map<String, serde_json::Value>>(),
+    "required": tool.params.iter().filter_map(|(name, prop)| {
+      if prop.required.unwrap_or(false) {
+        Some(name.clone())
+      } else {
+        None
+      }
+    }).collect::<Vec<String>>(),
+  })
 }
 
 impl OpenAISession {
@@ -92,7 +118,7 @@ impl OpenAISession {
         function: oai::FunctionObject {
           name: t.name.clone(),
           description: Some(t.description.clone()),
-          parameters: Some(t.parameters.clone()),
+          parameters: Some(tool_definition_to_params_json(&t)),
           strict: None,
         },
       })

@@ -17,11 +17,11 @@ impl Executor {
 
   pub async fn execute_tool(
     &self,
-    tool: &crate::config::Tool,
+    tool: &crate::config::ToolConfig,
     input: &serde_json::Value,
     default_shell: &str,
   ) -> Result<String> {
-    let command = tool.build_command(input)?;
+    let command = tool.build_command()?;
     let env_vars = tool.build_env_vars(input);
     let shell = tool.get_shell(default_shell);
 
@@ -98,27 +98,29 @@ impl Executor {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::config::{JsonSchema, Property, Tool};
+  use crate::config::{Property, ToolConfig, ToolDefinition, ToolImplementation};
 
   #[tokio::test]
   async fn test_execute_echo() {
-    let tool = Tool {
-      name: "echo".to_string(),
-      description: "Echo a message".to_string(),
-      input_schema: JsonSchema::Object {
-        properties: vec![(
+    let tool = ToolConfig {
+      definition: ToolDefinition {
+        name: "echo".to_string(),
+        description: "Echo a message".to_string(),
+        params: vec![(
           "message".to_string(),
           Property {
             prop_type: "string".to_string(),
             description: "Message to echo".to_string(),
+            required: Some(true),
           },
         )]
         .into_iter()
         .collect(),
-        required: vec!["message".to_string()],
       },
-      command: "echo \"$param_message\"".to_string(),
-      shell: None,
+      implementation: ToolImplementation {
+        command: "echo \"$param_message\"".to_string(),
+        shell: None,
+      },
     };
 
     let input = serde_json::json!({

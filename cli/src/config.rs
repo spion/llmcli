@@ -7,26 +7,28 @@ use std::path::Path;
 pub struct Config {
   #[serde(default = "default_shell")]
   pub shell: String,
-  pub tools: Vec<Tool>,
+  pub tools: Vec<ToolConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tool {
+pub struct ToolConfig {
+  #[serde(flatten)]
+  pub definition: ToolDefinition,
+  #[serde(flatten)]
+  pub implementation: ToolImplementation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolDefinition {
   pub name: String,
   pub description: String,
-  pub input_schema: JsonSchema,
-  pub command: String,
-  pub shell: Option<String>,
+  pub params: HashMap<String, Property>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
-pub enum JsonSchema {
-  Object {
-    properties: HashMap<String, Property>,
-    #[serde(default)]
-    required: Vec<String>,
-  },
+pub struct ToolImplementation {
+  pub command: String,
+  pub shell: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +36,7 @@ pub struct Property {
   #[serde(rename = "type")]
   pub prop_type: String,
   pub description: String,
+  pub required: Option<bool>,
 }
 
 fn default_shell() -> String {
@@ -49,19 +52,17 @@ impl Config {
   }
 }
 
-impl Tool {
+impl ToolConfig {
   pub fn get_shell(&self, default: &str) -> String {
-    self.shell.clone().unwrap_or_else(|| default.to_string())
+    self
+      .implementation
+      .shell
+      .clone()
+      .unwrap_or_else(|| default.to_string())
   }
 
-  pub fn validate_input(&self, input: &serde_json::Value) -> Result<()> {
-    // TODO: use an existing json schema validation library
-    Ok(())
-  }
-
-  pub fn build_command(&self, input: &serde_json::Value) -> Result<String> {
-    self.validate_input(input)?;
-    Ok(self.command.clone())
+  pub fn build_command(&self) -> Result<String> {
+    Ok(self.implementation.command.clone())
   }
 
   pub fn build_env_vars(&self, input: &serde_json::Value) -> Vec<(String, String)> {
