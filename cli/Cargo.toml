@@ -19,3 +19,6 @@ eventsource-stream = "0.2"
 futures = "0.3"
 regex = "1.11"
 chrono = { version = "0.4", features = ["serde"] }
+# async-openai = "0.28.3"
+async-openai-types = "0.24.1"
+async-trait = "0.1.88"
