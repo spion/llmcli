@@ -30,12 +30,27 @@ impl OpenAIClient {
 #[async_trait]
 impl LlmClient for OpenAIClient {
   async fn create_session(&self, config: SessionConfig) -> Result<Box<dyn LlmSession>> {
+    let cached_tools = config
+      .tools
+      .iter()
+      .map(|t| oai::ChatCompletionTool {
+        r#type: oai::ChatCompletionToolType::Function,
+        function: oai::FunctionObject {
+          name: t.name.clone(),
+          description: Some(t.description.clone()),
+          parameters: Some(tool_definition_to_params_json(t)),
+          strict: Some(true),
+        },
+      })
+      .collect::<Vec<_>>();
+
     Ok(Box::new(OpenAISession {
       client: self.client.clone(),
       base_url: self.base_url.clone(),
       api_key: self.api_key.clone(),
       config,
       messages: Vec::new(),
+      cached_tools,
     }))
   }
 }
@@ -45,6 +60,7 @@ struct OpenAISession {
   base_url: String,
   api_key: String,
   config: SessionConfig,
+  cached_tools: Vec<oai::ChatCompletionTool>,
   messages: Vec<oai::ChatCompletionRequestMessage>,
 }
 
@@ -72,6 +88,30 @@ fn tool_definition_to_params_json(tool: &ToolDefinition) -> serde_json::Value {
 }
 
 impl OpenAISession {
+  fn new(client: Client, base_url: String, api_key: String, config: SessionConfig) -> Self {
+    let cached_tools = config
+      .tools
+      .iter()
+      .map(|t| oai::ChatCompletionTool {
+        r#type: oai::ChatCompletionToolType::Function,
+        function: oai::FunctionObject {
+          name: t.name.clone(),
+          description: Some(t.description.clone()),
+          parameters: Some(tool_definition_to_params_json(t)),
+          strict: None,
+        },
+      })
+      .collect();
+    Self {
+      client,
+      base_url,
+      api_key,
+      config,
+      messages: Vec::new(),
+      cached_tools,
+    }
+  }
+
   fn add_user_message(&mut self, content: String) {
     // Add system prompt if this is the first message
     if self.messages.is_empty() && self.config.system_prompt.is_some() {
@@ -109,25 +149,10 @@ impl OpenAISession {
   async fn complete(&mut self) -> Result<CompletionResult> {
     // Build request
 
-    let tools = self
-      .config
-      .tools
-      .iter()
-      .map(|t| oai::ChatCompletionTool {
-        r#type: oai::ChatCompletionToolType::Function,
-        function: oai::FunctionObject {
-          name: t.name.clone(),
-          description: Some(t.description.clone()),
-          parameters: Some(tool_definition_to_params_json(&t)),
-          strict: None,
-        },
-      })
-      .collect();
-
     let request = oai::CreateChatCompletionRequest {
       model: self.config.model.clone(),
       messages: self.messages.clone(),
-      tools: Some(tools),
+      tools: Some(self.cached_tools.clone()),
       parallel_tool_calls: Some(true),
       ..Default::default()
     };
@@ -157,56 +182,40 @@ impl OpenAISession {
 
     let choice = completion
       .choices
-      .into_iter()
-      .next()
+      .first()
       .ok_or_else(|| anyhow!("No choices in response"))?;
 
-    let message = choice.message;
+    let message = &choice.message;
+
+    let message_content = message
+      .content
+      .clone()
+      .map(ChatCompletionRequestAssistantMessageContent::Text);
+
+    self
+      .messages
+      .push(oai::ChatCompletionRequestMessage::Assistant(
+        oai::ChatCompletionRequestAssistantMessage {
+          content: message_content,
+          tool_calls: message.tool_calls.clone(),
+          ..Default::default()
+        },
+      ));
 
     let result = CompletionResult {
       content: message.content.clone(),
       tool_calls: message
         .tool_calls
-        .unwrap_or_default()
-        .into_iter()
+        .as_ref()
+        .unwrap_or(&Vec::new())
+        .iter()
         .map(|tc| ToolCall {
-          id: tc.id,
-          name: tc.function.name,
+          id: tc.id.clone(),
+          name: tc.function.name.clone(),
           arguments: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
         })
         .collect(),
     };
-
-    // Add assistant message to history
-    self
-      .messages
-      .push(oai::ChatCompletionRequestMessage::Assistant(
-        oai::ChatCompletionRequestAssistantMessage {
-          content: result
-            .content
-            .clone()
-            .map(ChatCompletionRequestAssistantMessageContent::Text),
-          tool_calls: if result.tool_calls.is_empty() {
-            None
-          } else {
-            Some(
-              result
-                .tool_calls
-                .iter()
-                .map(|tc| oai::ChatCompletionMessageToolCall {
-                  id: tc.id.clone(),
-                  r#type: oai::ChatCompletionToolType::Function,
-                  function: oai::FunctionCall {
-                    name: tc.name.clone(),
-                    arguments: tc.arguments.to_string(),
-                  },
-                })
-                .collect(),
-            )
-          },
-          ..Default::default()
-        },
-      ));
 
     Ok(result)
   }
@@ -223,7 +232,7 @@ impl LlmSession for OpenAISession {
     self.add_user_message(content);
     let result = self.complete().await?;
 
-    // Just emit the final completion event
+    // Just emit the final completion event for now
     Ok(Box::new(Box::pin(stream::once(async move {
       Ok(LlmEvent::Completion(result))
     }))))
@@ -241,7 +250,7 @@ impl LlmSession for OpenAISession {
     self.add_tool_results(results);
     let result = self.complete().await?;
 
-    // Just emit the final completion event
+    // Just emit the final completion event for now
     Ok(Box::new(Box::pin(stream::once(async move {
       Ok(LlmEvent::Completion(result))
     }))))

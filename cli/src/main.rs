@@ -1,6 +1,6 @@
 mod config;
 mod executor;
-mod llm_client;
+mod llm_client_oai;
 mod llm_client_trait;
 
 use anyhow::Result;
@@ -10,8 +10,6 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
-
-use crate::config::ToolDefinition;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -41,7 +39,7 @@ async fn main() -> Result<()> {
   let api_key = std::env::var("LLM_CLI_TOKEN")?;
 
   // Create LLM client
-  let client = llm_client::OpenAIClient::new(base_url, api_key);
+  let client = llm_client_oai::OpenAIClient::new(base_url, api_key);
 
   let model = args
     .model
