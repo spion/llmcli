@@ -10,9 +10,9 @@ a controlled, programmable way.
 ## Premise
 
 Most agentic LLM tools are designed to offer broad capabilities to the LLM, then try to limit
-the LLM's access to the system through sandboxing or similar configuration. This approach can lead
-to unintended consequences. Furthermore, the configuration provided is often limited and inflexible,
-making it difficult to adapt to specific tasks.
+the LLM's access to the system through sandboxing, prompting or similar suboptimal methods. This 
+approach  can lead to unintended consequences. Furthermore, the configuration provided is often 
+limited and inflexible, making it difficult to adapt to specific tasks.
 
 `llmcli` takes a different approach. You get full control over the tools through a simple configuration
 file. Every tool is an arbitrary shell script, ran with the shell of your choice. You can define both
